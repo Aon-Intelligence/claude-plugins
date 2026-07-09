@@ -9,7 +9,7 @@
       "displayName": "Azure Static Web Editor",
       "source": "./plugins/azure-static-web-editor",
       "description": "Read, write, and manage static website files in Azure Blob Storage ($web container). Includes AI image generation via DALL-E and favicon creation.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": {
         "name": "Aon Intelligence"
       },

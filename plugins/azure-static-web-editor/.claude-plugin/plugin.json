@@ -1,7 +1,6 @@
 {
   "name": "azure-static-web-editor",
-  "displayName": "Azure Blob Static Web Editor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Read, write, and manage static website files in Azure Blob Storage ($web container). Includes AI image generation via DALL-E and favicon creation.",
   "author": {
     "name": "Aon Intelligence"
@@ -13,7 +12,8 @@
       "type": "string",
       "title": "Azure Storage connection string",
       "description": "Found in Azure Portal → your storage account → Security + networking → Access keys",
-      "sensitive": true
+      "sensitive": true,
+      "required": true
     },
     "OPENAI_API_KEY": {
       "type": "string",

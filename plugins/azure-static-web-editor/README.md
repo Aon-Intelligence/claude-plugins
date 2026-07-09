@@ -1,6 +1,6 @@
 # Azure Blob Static Web Editor
 
-A Claude Desktop plugin for reading, writing, and managing static websites hosted in Azure Blob Storage (`$web` container). Includes AI image generation via DALL-E and automatic favicon creation.
+A Claude plugin for reading, writing, and managing static websites hosted in Azure Blob Storage (`$web` container). Includes AI image generation via DALL-E and automatic favicon creation.
 
 ## What it does
 
@@ -12,61 +12,48 @@ A Claude Desktop plugin for reading, writing, and managing static websites hoste
 
 ## Prerequisites
 
-- Python 3.10+
+- **Claude Desktop.** This plugin runs a local MCP server, which works in the Desktop app's Chat tab and in Cowork. It does not run in browser chat at claude.ai.
+- **[uv](https://docs.astral.sh/uv/)**, which manages the server's Python dependencies for you. Install it with:
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
+  You do not need to set up Python or install packages yourself.
 - An Azure Storage account with static website hosting enabled (`$web` container)
-- An OpenAI API key (required for image generation)
+- An OpenAI API key, if you want image generation
 
-## Setup
+macOS and Linux only for now — the server launches through a shell script.
 
-### 1. Install Python dependencies
+## Install
 
-From inside the `server/` directory:
+1. Open **Customize** in the Claude Desktop sidebar, then the **Plugins** tab.
+2. Under **Personal plugins**, click **+** → **Add marketplace** → **Add from a repository**.
+3. Enter `Aon-Intelligence/claude-plugins`.
+4. Find **Azure Static Web Editor** and click **Install**.
 
-```bash
-pip install -r plugins/azure-static-web-editor/server/requirements.txt
-```
+Claude prompts you for three values at install time. They are stored by Claude — the two secrets go to your system's secure storage, and nothing is written into this repo.
 
-Or with `uv`:
-
-```bash
-uv pip install -r plugins/azure-static-web-editor/server/requirements.txt
-```
-
-### 2. Set environment variables
-
-Add these to your shell config (`~/.zshrc` on Mac):
-
-```bash
-export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net"
-export AZURE_STORAGE_CONTAINER_NAME="$web"
-export OPENAI_API_KEY="sk-..."
-```
-
-Then reload your shell:
-
-```bash
-source ~/.zshrc
-```
-
-Your Azure connection string can be found in the Azure Portal under:
-**Storage account → Security + networking → Access keys**
-
-`AZURE_STORAGE_CONTAINER_NAME` is typically `$web` for Azure static website hosting, but can be any container name.
-
-### 3. Install the plugin
-
-In Claude Desktop:
-
-```
-/plugin install azure-static-web-editor@aon-intelligence
-```
+| Value | Where to find it |
+|-------|------------------|
+| Azure Storage connection string | Azure Portal → your storage account → Security + networking → Access keys |
+| OpenAI API key | platform.openai.com/api-keys |
+| Container name | Defaults to `$web`; change only if your site lives elsewhere |
 
 ## Usage
 
-Once installed, Claude will automatically load the static web editor skill when you mention your website. For example:
+Claude loads the static web editor skill automatically when you mention your website:
 
 - *"Show me all the files on the website"*
 - *"Update the homepage hero text"*
 - *"Add a new About page"*
 - *"Generate a hero image of a modern office for the homepage"*
 - *"Create a favicon from the logo image"*
+
+## Development
+
+The server declares its dependencies inline with [PEP 723](https://peps.python.org/pep-0723/) in `server/server.py`, so there is no `requirements.txt` to keep in sync. Run it directly with:
+
+```bash
+uv run --script server/server.py
+```
+
+It expects `AZURE_STORAGE_CONNECTION_STRING` and, for image generation, `OPENAI_API_KEY` in the environment.

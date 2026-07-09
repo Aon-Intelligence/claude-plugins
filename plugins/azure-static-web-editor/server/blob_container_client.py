@@ -2,9 +2,46 @@
 import os
 import mimetypes
 import base64
-import time
-from typing import List, Dict, Any, Union, Optional
-from azure.storage.blob import BlobServiceClient, ContentSettings
+from typing import List, Dict, Any
+
+from azure.storage.blob import BlobServiceClient, ContainerClient, ContentSettings
+
+# Azure's static website feature always serves from a container named "$web".
+DEFAULT_CONTAINER = "$web"
+
+# Extensions mimetypes maps to a non-"text/" type but that are text on disk.
+_TEXT_CONTENT_TYPES = {
+    "application/javascript",
+    "application/json",
+    "application/xml",
+    "image/svg+xml",
+}
+
+
+def is_text_file(file_name: str) -> bool:
+    """Whether a blob should round-trip as UTF-8 text rather than base64."""
+    content_type, _ = mimetypes.guess_type(file_name)
+    if content_type is None:
+        return False
+    return content_type.startswith("text/") or content_type in _TEXT_CONTENT_TYPES
+
+
+def _container() -> ContainerClient:
+    connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+    if not connection_string:
+        raise ValueError(
+            "Missing AZURE_STORAGE_CONNECTION_STRING. Set it under "
+            "Customize -> Plugins -> Azure Static Web Editor."
+        )
+
+    container_name = os.getenv("AZURE_STORAGE_CONTAINER_NAME") or DEFAULT_CONTAINER
+
+    service = BlobServiceClient.from_connection_string(
+        connection_string,
+        connection_timeout=30,
+        read_timeout=30,
+    )
+    return service.get_container_client(container_name)
 
 
 def upload_content_to_blob(file_name: str, content: str) -> str:
@@ -18,19 +55,7 @@ def upload_content_to_blob(file_name: str, content: str) -> str:
     Returns:
         str: The final file name used
     """
-    connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-    container_name = os.getenv("AZURE_STORAGE_CONTAINER_NAME")
-
-    if not connection_string or not container_name:
-        raise ValueError("Missing AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_CONTAINER_NAME environment variables")
-
-    blob_service_client = BlobServiceClient.from_connection_string(
-        connection_string,
-        connection_timeout=30,
-        read_timeout=30,
-    )
-
-    blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
+    blob_client = _container().get_blob_client(file_name)
     content_type = mimetypes.guess_type(file_name)[0]
 
     if content_type:
@@ -54,19 +79,7 @@ def upload_image_to_blob(file_name: str, image_bytes: bytes) -> None:
         file_name (str): The name to give the file in blob storage
         image_bytes (bytes): The image bytes to upload
     """
-    connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-    container_name = os.getenv("AZURE_STORAGE_CONTAINER_NAME")
-
-    if not connection_string or not container_name:
-        raise ValueError("Missing AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_CONTAINER_NAME environment variables")
-
-    blob_service_client = BlobServiceClient.from_connection_string(
-        connection_string,
-        connection_timeout=30,
-        read_timeout=30,
-    )
-
-    blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
+    blob_client = _container().get_blob_client(file_name)
 
     # Detect content type from filename so .ico files get the right type
     content_type = mimetypes.guess_type(file_name)[0] or "image/jpeg"
@@ -74,37 +87,41 @@ def upload_image_to_blob(file_name: str, image_bytes: bytes) -> None:
         image_bytes,
         overwrite=True,
         content_settings=ContentSettings(content_type=content_type),
+        timeout=60,
     )
 
 
-def download_contents_from_blob(file_name: str) -> Union[str, bytes]:
+def download_bytes_from_blob(file_name: str) -> bytes:
     """
-    Download content from blob storage with a specific file name.
+    Download the raw bytes of a blob.
 
     Args:
         file_name (str): The name of the file to download from blob storage
 
     Returns:
-        Union[str, bytes]: Base64-encoded string for JPEG files, raw content for others
+        bytes: The blob's raw content
     """
-    connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-    container_name = os.getenv("AZURE_STORAGE_CONTAINER_NAME")
+    return _container().get_blob_client(file_name).download_blob().readall()
 
-    if not connection_string or not container_name:
-        raise ValueError("Missing AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_CONTAINER_NAME environment variables")
 
-    blob_service_client = BlobServiceClient.from_connection_string(
-        connection_string,
-        connection_timeout=30,
-        read_timeout=30,
-    )
-    blob_client = blob_service_client.get_blob_client(container=container_name, blob=file_name)
-    content = blob_client.download_blob().readall()
+def download_contents_from_blob(file_name: str) -> str:
+    """
+    Download a blob as a string.
 
-    if file_name.endswith(".jpeg"):
-        return base64.b64encode(content).decode("utf-8")
-    else:
-        return content
+    Text files decode as UTF-8. Everything else is base64-encoded, since MCP
+    responses are JSON and cannot carry raw bytes.
+
+    Args:
+        file_name (str): The name of the file to download from blob storage
+
+    Returns:
+        str: UTF-8 text for text files, base64 for binary files
+    """
+    content = download_bytes_from_blob(file_name)
+
+    if is_text_file(file_name):
+        return content.decode("utf-8")
+    return base64.b64encode(content).decode("ascii")
 
 
 def get_all_files_in_container() -> List[Dict[str, Any]]:
@@ -114,21 +131,8 @@ def get_all_files_in_container() -> List[Dict[str, Any]]:
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing blob information
     """
-    connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-    container_name = os.getenv("AZURE_STORAGE_CONTAINER_NAME")
-
-    if not connection_string or not container_name:
-        raise ValueError("Missing AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_CONTAINER_NAME environment variables")
-
-    blob_service_client = BlobServiceClient.from_connection_string(
-        connection_string,
-        connection_timeout=30,
-        read_timeout=30,
-    )
-    container_client = blob_service_client.get_container_client(container_name)
-
     simplified_blob_list = []
-    for blob in container_client.list_blobs():
+    for blob in _container().list_blobs():
         blob_info = {
             "name": blob.name,
             "size": blob.size,
