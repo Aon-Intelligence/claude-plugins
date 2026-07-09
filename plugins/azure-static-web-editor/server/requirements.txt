@@ -1,0 +1,6 @@
+azure-storage-blob
+mcp[cli]
+openai
+Pillow
+python-dotenv
+requests

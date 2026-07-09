@@ -1,0 +1,31 @@
+{
+  "name": "azure-static-web-editor",
+  "displayName": "Azure Blob Static Web Editor",
+  "version": "0.1.0",
+  "description": "Read, write, and manage static website files in Azure Blob Storage ($web container). Includes AI image generation via DALL-E and favicon creation.",
+  "author": {
+    "name": "Aon Intelligence"
+  },
+  "repository": "https://github.com/Aon-Intelligence/claude-plugins",
+  "keywords": ["azure", "blob-storage", "static-web", "html", "image-generation"],
+  "userConfig": {
+    "AZURE_STORAGE_CONNECTION_STRING": {
+      "type": "string",
+      "title": "Azure Storage connection string",
+      "description": "Found in Azure Portal → your storage account → Security + networking → Access keys",
+      "sensitive": true
+    },
+    "OPENAI_API_KEY": {
+      "type": "string",
+      "title": "OpenAI API key",
+      "description": "Required for AI image generation via DALL-E. Found at platform.openai.com/api-keys",
+      "sensitive": true
+    },
+    "AZURE_STORAGE_CONTAINER_NAME": {
+      "type": "string",
+      "title": "Azure Blob container name",
+      "description": "The container hosting your static website. Press enter to use the default.",
+      "default": "$web"
+    }
+  }
+}

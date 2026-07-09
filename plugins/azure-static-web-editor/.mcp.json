@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "static-web-editor": {
+      "command": "python",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/server.py"],
+      "env": {
+        "AZURE_STORAGE_CONNECTION_STRING": "${user_config.AZURE_STORAGE_CONNECTION_STRING}",
+        "AZURE_STORAGE_CONTAINER_NAME": "${user_config.AZURE_STORAGE_CONTAINER_NAME}",
+        "OPENAI_API_KEY": "${user_config.OPENAI_API_KEY}"
+      }
+    }
+  }
+}
