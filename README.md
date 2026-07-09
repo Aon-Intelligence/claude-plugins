@@ -30,7 +30,7 @@ See each plugin's README for prerequisites.
 
 Create a directory under `plugins/` with a `.claude-plugin/plugin.json`, then add an entry to `.claude-plugin/marketplace.json`. Follow `azure-static-web-editor` as a template.
 
-Plugins that bundle a local MCP server should not assume a Python interpreter or preinstalled packages exist on the user's machine. Declare dependencies inline with [PEP 723](https://peps.python.org/pep-0723/) and launch through `uv`, as `azure-static-web-editor` does. Note that GUI-launched apps on macOS receive a minimal `PATH` that excludes Homebrew, so resolve tool locations explicitly rather than relying on the ambient `PATH`.
+Plugins that bundle an MCP server should not assume a Python interpreter or preinstalled packages exist on the user's machine. Declare dependencies inline with [PEP 723](https://peps.python.org/pep-0723/) and launch through `uv`, as `azure-static-web-editor` does. HTTP-based servers (Streamable HTTP or SSE) are preferred over stdio when you plan to run in Docker or a cloud container — the client connects via URL instead of spawning a subprocess. Note that GUI-launched apps on macOS receive a minimal `PATH` that excludes Homebrew, so resolve tool locations explicitly rather than relying on the ambient `PATH`.
 
 ## Validate before publishing
 

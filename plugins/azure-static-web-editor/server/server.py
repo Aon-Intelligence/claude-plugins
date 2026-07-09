@@ -6,16 +6,24 @@
 #     "openai>=1.40",
 #     "Pillow>=10.0",
 #     "requests>=2.31",
+#     "uvicorn>=0.30",
 # ]
 # ///
 """MCP server for editing a static website hosted in Azure Blob Storage.
+
+Runs as a local HTTP service (Streamable HTTP by default). Start with
+`./server/run-server.sh`, then point your MCP client at the URL printed on
+startup (default: http://127.0.0.1:8000/mcp).
 
 Dependencies are declared inline (PEP 723) so `uv run --script` resolves them
 into an ephemeral environment. Clients need `uv`, not a Python setup.
 """
 import json
+import os
 
 from mcp.server.fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from blob_container_client import (
     upload_content_to_blob,
@@ -28,6 +36,18 @@ from blob_container_client import (
 from image_generator import generate_image_from_prompt, generate_favicon_ico
 
 mcp = FastMCP("static-web-editor")
+
+# Host/port/transport can be set via env vars or FASTMCP_* (see mcp SDK settings).
+mcp.settings.host = os.environ.get("MCP_HOST", mcp.settings.host)
+mcp.settings.port = int(os.environ.get("MCP_PORT", str(mcp.settings.port)))
+
+TRANSPORT = os.environ.get("MCP_TRANSPORT", "streamable-http")
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health(_request: Request) -> JSONResponse:
+    """Liveness probe for Docker, Azure Container Apps, etc."""
+    return JSONResponse({"status": "ok", "service": "static-web-editor"})
 
 
 @mcp.tool()
@@ -117,4 +137,24 @@ def generate_favicon(filename: str) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run()
+    if TRANSPORT not in ("sse", "streamable-http"):
+        raise SystemExit(
+            f"Invalid MCP_TRANSPORT={TRANSPORT!r}. Use 'streamable-http' or 'sse'."
+        )
+
+    endpoint = (
+        mcp.settings.streamable_http_path
+        if TRANSPORT == "streamable-http"
+        else mcp.settings.sse_path
+    )
+    print(
+        f"static-web-editor listening on http://{mcp.settings.host}:{mcp.settings.port}{endpoint}",
+        flush=True,
+    )
+    if TRANSPORT == "sse":
+        print(
+            f"  POST messages: http://{mcp.settings.host}:{mcp.settings.port}{mcp.settings.message_path}",
+            flush=True,
+        )
+
+    mcp.run(transport=TRANSPORT)

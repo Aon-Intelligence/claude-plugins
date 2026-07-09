@@ -10,33 +10,67 @@ A Claude plugin for reading, writing, and managing static websites hosted in Azu
 - **Generate images** — Use DALL-E to create images and upload them directly to your site
 - **Create favicons** — Convert any image on your site into a `favicon.ico`
 
+## Architecture
+
+The MCP server runs as a **local HTTP service** (Streamable HTTP transport). You start it once, then Claude connects over the network instead of spawning a subprocess.
+
+```
+Claude Desktop / Claude Code
+        │
+        ▼  HTTP (http://127.0.0.1:8000/mcp)
+┌───────────────────────────┐
+│  static-web-editor server │  ← uv + Python, reads .env
+└───────────────────────────┘
+        │
+        ▼
+  Azure Blob Storage ($web)
+```
+
+This model is easier to run in Docker and Azure Container Apps later — the same server binary, different host/port.
+
 ## Prerequisites
 
-- **Claude Desktop.** This plugin runs a local MCP server, which works in the Desktop app's Chat tab and in Cowork. It does not run in browser chat at claude.ai.
-- **[uv](https://docs.astral.sh/uv/)**, which manages the server's Python dependencies for you. Install it with:
+- **[uv](https://docs.astral.sh/uv/)** to resolve Python dependencies:
   ```bash
   curl -LsSf https://astral.sh/uv/install.sh | sh
   ```
-  You do not need to set up Python or install packages yourself.
 - An Azure Storage account with static website hosting enabled (`$web` container)
 - An OpenAI API key, if you want image generation
 
-macOS and Linux only for now — the server launches through a shell script.
+macOS and Linux only for now.
 
-## Install
+## Quick start (local)
+
+1. Copy the example env file and add your credentials:
+   ```bash
+   cd plugins/azure-static-web-editor
+   cp .env.example .env
+   # edit .env — at minimum set AZURE_STORAGE_CONNECTION_STRING
+   ```
+
+2. Start the server:
+   ```bash
+   ./server/run-server.sh
+   ```
+   Default endpoint: **http://127.0.0.1:8000/mcp**
+
+3. Install the plugin in Claude (see below). The bundled `.mcp.json` already points at that URL.
+
+4. Verify with the health check:
+   ```bash
+   curl http://127.0.0.1:8000/health
+   ```
+
+## Install the plugin
 
 1. Open **Customize** in the Claude Desktop sidebar, then the **Plugins** tab.
 2. Under **Personal plugins**, click **+** → **Add marketplace** → **Add from a repository**.
 3. Enter `Aon-Intelligence/claude-plugins`.
 4. Find **Azure Static Web Editor** and click **Install**.
 
-Claude prompts you for three values at install time. They are stored by Claude — the two secrets go to your system's secure storage, and nothing is written into this repo.
+The plugin connects to the HTTP server at `http://127.0.0.1:8000/mcp`. **You must start the server yourself** (step 2 above) before using the plugin — Claude no longer spawns it as a subprocess.
 
-| Value | Where to find it |
-|-------|------------------|
-| Azure Storage connection string | Azure Portal → your storage account → Security + networking → Access keys |
-| OpenAI API key | platform.openai.com/api-keys |
-| Container name | Defaults to `$web`; change only if your site lives elsewhere |
+Secrets live in your local `.env` file (or container environment), not in Claude's plugin config.
 
 ## Usage
 
@@ -48,12 +82,28 @@ Claude loads the static web editor skill automatically when you mention your web
 - *"Generate a hero image of a modern office for the homepage"*
 - *"Create a favicon from the logo image"*
 
+## Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AZURE_STORAGE_CONNECTION_STRING` | — | Required. Azure Portal → storage account → Access keys |
+| `AZURE_STORAGE_CONTAINER_NAME` | `$web` | Blob container for the static site |
+| `OPENAI_API_KEY` | — | Required for DALL-E image generation |
+| `MCP_HOST` | `127.0.0.1` | Bind address. Use `0.0.0.0` in Docker / Azure |
+| `MCP_PORT` | `8000` | Listen port |
+| `MCP_TRANSPORT` | `streamable-http` | `streamable-http` (recommended) or legacy `sse` |
+
+### Legacy SSE transport
+
+If your MCP client only supports the older SSE transport, set `MCP_TRANSPORT=sse` in `.env`. The SSE endpoint is `http://127.0.0.1:8000/sse` and requires a separate POST channel at `/messages/`. Streamable HTTP (`/mcp`) is preferred for new setups.
+
 ## Development
 
-The server declares its dependencies inline with [PEP 723](https://peps.python.org/pep-0723/) in `server/server.py`, so there is no `requirements.txt` to keep in sync. Run it directly with:
+Dependencies are declared inline with [PEP 723](https://peps.python.org/pep-0723/) in `server/server.py` — no separate `requirements.txt`.
 
 ```bash
+export AZURE_STORAGE_CONNECTION_STRING="..."
 uv run --script server/server.py
 ```
 
-It expects `AZURE_STORAGE_CONNECTION_STRING` and, for image generation, `OPENAI_API_KEY` in the environment.
+Or use the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) with transport **Streamable HTTP** and URL `http://127.0.0.1:8000/mcp`.
