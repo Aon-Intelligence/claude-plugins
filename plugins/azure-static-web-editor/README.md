@@ -61,6 +61,45 @@ macOS and Linux only for now.
    curl http://127.0.0.1:8000/health
    ```
 
+## Claude Desktop setup
+
+**Do not use Customize → Connectors → Add custom connector** for this server. Custom connectors are for **remote** MCP servers on public **HTTPS** URLs — Anthropic's cloud calls that URL and cannot reach your machine.
+
+For local development:
+
+1. **Start the HTTP server** (keep this running):
+   ```bash
+   ./server/run-server.sh
+   ```
+
+2. **Install the plugin** via Customize → **Plugins** (not Connectors):
+   - Add marketplace `Aon-Intelligence/claude-plugins`
+   - Install **Azure Static Web Editor**
+
+   The plugin uses `mcp-remote` to bridge Claude Desktop (stdio) to your local HTTP server at `http://127.0.0.1:8000/mcp`. Node.js is required for `npx`.
+
+3. **Alternative — Developer config** (if not using the plugin):
+
+   Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+   ```json
+   {
+     "mcpServers": {
+       "static-web-editor": {
+         "command": "npx",
+         "args": [
+           "-y",
+           "mcp-remote@latest",
+           "http://127.0.0.1:8000/mcp",
+           "--allow-http"
+         ]
+       }
+     }
+   }
+   ```
+
+   Restart Claude Desktop completely after saving.
+
 ## Install the plugin
 
 1. Open **Customize** in the Claude Desktop sidebar, then the **Plugins** tab.
@@ -68,7 +107,7 @@ macOS and Linux only for now.
 3. Enter `Aon-Intelligence/claude-plugins`.
 4. Find **Azure Static Web Editor** and click **Install**.
 
-The plugin connects to the HTTP server at `http://127.0.0.1:8000/mcp`. **You must start the server yourself** (step 2 above) before using the plugin — Claude no longer spawns it as a subprocess.
+The plugin bridges Claude Desktop to your local HTTP server via `mcp-remote`. **You must start the server yourself** (see Quick start) before using the plugin.
 
 Secrets live in your local `.env` file (or container environment), not in Claude's plugin config.
 

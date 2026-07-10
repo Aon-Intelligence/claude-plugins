@@ -34,9 +34,16 @@ fi
 
 if [ -f "$PLUGIN_ROOT/.env" ]; then
     set -a
+    set +u  # .env values may contain $ (e.g. Azure static site container "$web")
     # shellcheck disable=SC1091
     . "$PLUGIN_ROOT/.env"
+    set -u
     set +a
+fi
+
+if [ -z "${AZURE_STORAGE_CONTAINER_NAME:-}" ]; then
+    AZURE_STORAGE_CONTAINER_NAME='$web'
+    export AZURE_STORAGE_CONTAINER_NAME
 fi
 
 if [ -z "${AZURE_STORAGE_CONNECTION_STRING:-}" ]; then
