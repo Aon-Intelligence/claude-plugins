@@ -99,7 +99,7 @@ def save_file(file_name: str, content: str) -> str:
 @mcp.tool()
 def generate_image(prompt: str, file_name: str, size: str = "1024x1024") -> str:
     """
-    Generates an image using OpenAI's DALL-E API and uploads it to the website.
+    Generates an image using OpenAI's image API and uploads it to the website.
 
     Images are saved to the images/ folder. Always prefix the file_name with "images/".
 
@@ -110,7 +110,7 @@ def generate_image(prompt: str, file_name: str, size: str = "1024x1024") -> str:
                       "A professional team photo illustration with diverse people in a modern office"
         file_name (str): Where to save the image. Must use "images/" prefix.
             Examples: "images/hero.jpeg", "images/team-photo.jpeg"
-        size (str): Image dimensions. Options: "1024x1024" (square), "1792x1024" (landscape), "1024x1792" (portrait).
+        size (str): Image dimensions. Options: "1024x1024" (square), "1536x1024" (landscape), "1024x1536" (portrait).
             Default: "1024x1024"
     """
     img = generate_image_from_prompt(prompt, size)

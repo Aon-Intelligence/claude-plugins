@@ -66,4 +66,20 @@ export MCP_HOST="${MCP_HOST:-127.0.0.1}"
 export MCP_PORT="${MCP_PORT:-8000}"
 export MCP_TRANSPORT="${MCP_TRANSPORT:-streamable-http}"
 
-exec "$UV" run --quiet --script "$(dirname "$0")/server.py"
+cleanup() {
+    # uv run spawns a child Python process; SIGINT to the parent can leave it behind.
+    if [ -n "${child:-}" ]; then
+        kill -TERM "$child" 2>/dev/null || true
+        wait "$child" 2>/dev/null || true
+    fi
+    pids="$(lsof -t -iTCP:"$MCP_PORT" -sTCP:LISTEN 2>/dev/null || true)"
+    if [ -n "$pids" ]; then
+        kill -TERM $pids 2>/dev/null || true
+    fi
+}
+
+trap cleanup INT TERM
+
+"$UV" run --quiet --script "$(dirname "$0")/server.py" &
+child=$!
+wait "$child"
