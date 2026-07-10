@@ -30,8 +30,8 @@ def _container() -> ContainerClient:
     connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
     if not connection_string:
         raise ValueError(
-            "Missing AZURE_STORAGE_CONNECTION_STRING. Set it under "
-            "Customize -> Plugins -> Azure Static Web Editor."
+            "Missing AZURE_STORAGE_CONNECTION_STRING. "
+            "Set it in plugins/azure-static-web-editor/.env and restart the server."
         )
 
     container_name = os.getenv("AZURE_STORAGE_CONTAINER_NAME") or DEFAULT_CONTAINER

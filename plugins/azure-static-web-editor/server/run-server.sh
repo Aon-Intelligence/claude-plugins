@@ -52,6 +52,16 @@ if [ -z "${AZURE_STORAGE_CONNECTION_STRING:-}" ]; then
     exit 1
 fi
 
+case "$AZURE_STORAGE_CONNECTION_STRING" in
+    *AccountName=*AccountKey=*)
+        ;;
+    *)
+        echo "azure-static-web-editor: AZURE_STORAGE_CONNECTION_STRING looks truncated." >&2
+        echo "Wrap the entire value in single quotes in .env — semicolons break shell sourcing." >&2
+        exit 1
+        ;;
+esac
+
 export MCP_HOST="${MCP_HOST:-127.0.0.1}"
 export MCP_PORT="${MCP_PORT:-8000}"
 export MCP_TRANSPORT="${MCP_TRANSPORT:-streamable-http}"
