@@ -5,7 +5,7 @@
       "args": [
         "-y",
         "mcp-remote@latest",
-        "http://127.0.0.1:8000/mcp",
+        "http://127.0.0.1:8001/mcp",
         "--allow-http"
       ]
     }
