@@ -9,6 +9,7 @@ A Claude plugin for reading, writing, and managing static websites hosted in Azu
 - **Write files** — Create or update pages, styles, scripts, and more
 - **Generate images** — Use DALL-E to create images and upload them directly to your site
 - **Create favicons** — Convert any image on your site into a `favicon.ico`
+- **Backup & restore** — Snapshot the site to `backups/YYYYMMDD###/` and restore a named version on demand
 
 ## Architecture
 
@@ -120,6 +121,9 @@ Claude loads the static web editor skill automatically when you mention your web
 - *"Add a new About page"*
 - *"Generate a hero image of a modern office for the homepage"*
 - *"Create a favicon from the logo image"*
+- *"Back up the site"*
+- *"List my backups"*
+- *"Restore backup 20260710001"*
 
 ## Configuration
 

@@ -9,6 +9,9 @@ from azure.storage.blob import BlobServiceClient, ContainerClient, ContentSettin
 # Azure's static website feature always serves from a container named "$web".
 DEFAULT_CONTAINER = "$web"
 
+# Site backups are stored under this prefix and excluded from live-site operations.
+BACKUP_PREFIX = "backups/"
+
 # Extensions mimetypes maps to a non-"text/" type but that are text on disk.
 _TEXT_CONTENT_TYPES = {
     "application/javascript",
@@ -124,6 +127,47 @@ def download_contents_from_blob(file_name: str) -> str:
     return base64.b64encode(content).decode("ascii")
 
 
+def _is_backup_path(blob_name: str) -> bool:
+    return blob_name == BACKUP_PREFIX.rstrip("/") or blob_name.startswith(BACKUP_PREFIX)
+
+
+def list_blob_names(prefix: str | None = None) -> List[str]:
+    """List blob names in the container, optionally filtered by prefix."""
+    container = _container()
+    if prefix:
+        return [blob.name for blob in container.list_blobs(name_starts_with=prefix)]
+    return [blob.name for blob in container.list_blobs()]
+
+
+def copy_blob_in_container(source_name: str, dest_name: str) -> None:
+    """Copy a blob to another path within the same container."""
+    container = _container()
+    source_client = container.get_blob_client(source_name)
+    props = source_client.get_blob_properties()
+    content_type = (
+        props.content_settings.content_type
+        if props.content_settings and props.content_settings.content_type
+        else None
+    )
+    data = source_client.download_blob().readall()
+
+    dest_client = container.get_blob_client(dest_name)
+    if content_type:
+        dest_client.upload_blob(
+            data,
+            overwrite=True,
+            content_settings=ContentSettings(content_type=content_type),
+            timeout=60,
+        )
+    else:
+        dest_client.upload_blob(data, overwrite=True, timeout=60)
+
+
+def delete_blob(file_name: str) -> None:
+    """Delete a blob from the container."""
+    _container().delete_blob(file_name)
+
+
 def get_all_files_in_container() -> List[Dict[str, Any]]:
     """
     Get all files in a blob storage container.
@@ -133,6 +177,8 @@ def get_all_files_in_container() -> List[Dict[str, Any]]:
     """
     simplified_blob_list = []
     for blob in _container().list_blobs():
+        if _is_backup_path(blob.name):
+            continue
         blob_info = {
             "name": blob.name,
             "size": blob.size,

@@ -34,6 +34,7 @@ from blob_container_client import (
     is_text_file,
 )
 from image_generator import generate_image_from_prompt, generate_favicon_ico
+from backup import create_site_backup, list_site_backups, restore_site_backup
 
 mcp = FastMCP("static-web-editor")
 
@@ -134,6 +135,48 @@ def generate_favicon(filename: str) -> str:
     favicon = generate_favicon_ico(image_bytes)
     upload_image_to_blob("favicon.ico", favicon)
     return f"favicon.ico generated from '{filename}' and saved to the website root."
+
+
+@mcp.tool()
+def create_backup() -> str:
+    """
+    Create a snapshot backup of the entire website.
+
+    Copies every live site file into backups/YYYYMMDD###/ (e.g. backups/20260710001/).
+    The backups/ folder itself is never included. Multiple backups on the same day
+    increment the sequence: 001, 002, 003, etc.
+
+    Returns a JSON summary with backup_id, files_copied, and the list of files.
+    """
+    result = create_site_backup()
+    return json.dumps(result, indent=2)
+
+
+@mcp.tool()
+def list_backups() -> str:
+    """
+    List all available site backups.
+
+    Returns a JSON array of backups with id (YYYYMMDD###), file_count, and files.
+    Newest backups appear first.
+    """
+    return json.dumps(list_site_backups(), indent=2)
+
+
+@mcp.tool()
+def restore_backup(backup_id: str) -> str:
+    """
+    Restore the website to a previous backup version.
+
+    Deletes all current live site files (backups/ is never touched), then copies
+    every file from backups/{backup_id}/ back to the site root.
+
+    Args:
+        backup_id (str): The backup version to restore, e.g. "20260710001".
+            Use list_backups() to see available versions.
+    """
+    result = restore_site_backup(backup_id)
+    return json.dumps(result, indent=2)
 
 
 if __name__ == "__main__":
