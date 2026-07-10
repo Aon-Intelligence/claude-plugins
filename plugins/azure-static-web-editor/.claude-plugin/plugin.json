@@ -1,6 +1,6 @@
 {
   "name": "azure-static-web-editor",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Read, write, and manage static website files in Azure Blob Storage ($web container). Connects to a local HTTP MCP server. Includes AI image generation via DALL-E and favicon creation.",
   "author": {
     "name": "Aon Intelligence"
